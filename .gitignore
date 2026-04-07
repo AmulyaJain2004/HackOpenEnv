@@ -2,3 +2,8 @@
 __pycache__/
 echo_env
 context.txt
+OpenEnv/
+.env
+reference-project-files
+my_rl_env/
+inference.py
