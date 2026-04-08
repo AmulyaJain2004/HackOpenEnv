@@ -5,5 +5,3 @@ context.txt
 OpenEnv/
 .env
 reference-project-files
-my_rl_env/
-inference.py
