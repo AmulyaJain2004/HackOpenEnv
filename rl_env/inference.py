@@ -39,6 +39,45 @@ MAX_TOTAL_REWARD_BY_TASK: Dict[str, float] = {
 }
 SUCCESS_SCORE_THRESHOLD = 0.55
 BENCHMARK = "bureaucracy_escape_room"
+LLM_SUCCESSFUL_CALLS = 0
+
+
+def _contains_non_ascii(value: str) -> bool:
+    return any(ord(character) > 127 for character in value)
+
+
+def _contains_whitespace(value: str) -> bool:
+    return any(character.isspace() for character in value)
+
+
+def _resolve_runtime_llm_config() -> tuple[str, str]:
+    api_base_url = os.environ["API_BASE_URL"].strip()
+    api_key = os.environ["API_KEY"].strip()
+
+    if not api_base_url:
+        raise RuntimeError("API_BASE_URL is empty")
+    if not api_key:
+        raise RuntimeError("API_KEY is empty")
+    if _contains_non_ascii(api_key) or _contains_whitespace(api_key):
+        raise RuntimeError("API_KEY contains invalid characters")
+
+    return api_base_url, api_key
+
+
+def _probe_llm_proxy(client: OpenAI) -> None:
+    global LLM_SUCCESSFUL_CALLS
+
+    completion = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": "Return one word: ok"},
+            {"role": "user", "content": "ping"},
+        ],
+        temperature=0.0,
+        max_tokens=4,
+    )
+    _ = completion.choices[0].message.content
+    LLM_SUCCESSFUL_CALLS += 1
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -179,6 +218,7 @@ def _heuristic_action(task_name: str, observation, history: List[str]) -> Option
 
 
 def get_model_message(client: OpenAI, step: int, message: str, reward: float, history: List[str], actions: List[str]) -> str:
+    global LLM_SUCCESSFUL_CALLS
     prompt = (
         "You are solving a bureaucratic workflow. "
         "Return exactly one action from available_actions, no explanation.\n"
@@ -198,6 +238,7 @@ def get_model_message(client: OpenAI, step: int, message: str, reward: float, hi
             temperature=0.0,
             max_tokens=32,
         )
+        LLM_SUCCESSFUL_CALLS += 1
         text = (completion.choices[0].message.content or "").strip().splitlines()[0].strip().strip('"\'')
         if text in actions:
             return text
@@ -208,6 +249,7 @@ def get_model_message(client: OpenAI, step: int, message: str, reward: float, hi
 
 def choose_action(task_name: str, observation, client: OpenAI, step: int, history: List[str], last_reward: float) -> str:
     actions = observation.available_actions
+    model_choice = get_model_message(client, step, observation.message, last_reward, history, actions)
     heuristic = _heuristic_action(task_name, observation, history)
     if heuristic and heuristic in actions:
         # Break short loops by selecting a different valid action if heuristic repeats too much.
@@ -220,7 +262,7 @@ def choose_action(task_name: str, observation, client: OpenAI, step: int, histor
                         return candidate
         return heuristic
 
-    return get_model_message(client, step, observation.message, last_reward, history, actions)
+    return model_choice
 
 
 async def run_task(client: OpenAI, task_name: str) -> float:
@@ -276,17 +318,19 @@ async def run_task(client: OpenAI, task_name: str) -> float:
 
 
 async def main() -> None:
-    if not API_BASE_URL:
-        raise RuntimeError("Set API_BASE_URL before running inference.py")
-    if not API_KEY:
-        raise RuntimeError("Set API_KEY before running inference.py")
+    global LLM_SUCCESSFUL_CALLS
     if not LOCAL_IMAGE_NAME:
         raise RuntimeError("Set LOCAL_IMAGE_NAME when using from_docker_image().")
 
-    client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
+    api_base_url, api_key = _resolve_runtime_llm_config()
+    client = OpenAI(base_url=api_base_url, api_key=api_key)
+    _probe_llm_proxy(client)
     scores = []
     for task_name in TASKS:
         scores.append(await run_task(client, task_name))
+
+    if LLM_SUCCESSFUL_CALLS == 0:
+        raise RuntimeError("No successful LLM proxy calls were made. Check API_BASE_URL/API_KEY configuration.")
 
     _ = sum(scores) / len(scores)
 
