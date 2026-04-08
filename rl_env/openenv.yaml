@@ -1,0 +1,29 @@
+spec_version: 1
+name: bureaucracy_escape_room
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
+
+metadata:
+  description: >
+    Real-world bureaucracy navigation environment with deterministic graders.
+    Agent must collect documents, resolve circular dependencies, and complete permit workflows.
+  tags:
+    - openenv
+    - planning
+    - real-world
+    - evaluation
+  tasks:
+    - id: dog_license
+      name: Dog License
+      difficulty: easy
+      max_steps: 15
+    - id: business_permit
+      name: Business Permit
+      difficulty: medium
+      max_steps: 25
+    - id: construction_permit
+      name: Construction Permit
+      difficulty: hard
+      max_steps: 40
