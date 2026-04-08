@@ -101,7 +101,7 @@ docker build -t rl_env-env:latest -f server/Dockerfile .
 ```bash
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o-mini
-export HF_TOKEN=<your-token>
+export API_KEY=<your-proxy-api-key>
 python inference.py
 ```
 

@@ -16,11 +16,10 @@ if str(ROOT) not in sys.path:
 from rl_env import RlAction, RlEnv
 
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+API_BASE_URL = os.environ.get("API_BASE_URL")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN = os.environ.get("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME") or os.environ.get("IMAGE_NAME")
-API_KEY = HF_TOKEN or os.environ.get("OPENAI_API_KEY") or os.environ.get("API_KEY")
+API_KEY = os.environ.get("API_KEY")
 
 TASK_ACTIONS = {
     "dog_license": "select_task_dog_license",
@@ -277,8 +276,10 @@ async def run_task(client: OpenAI, task_name: str) -> float:
 
 
 async def main() -> None:
+    if not API_BASE_URL:
+        raise RuntimeError("Set API_BASE_URL before running inference.py")
     if not API_KEY:
-        raise RuntimeError("Set HF_TOKEN (or OPENAI_API_KEY/API_KEY fallback) before running inference.py")
+        raise RuntimeError("Set API_KEY before running inference.py")
     if not LOCAL_IMAGE_NAME:
         raise RuntimeError("Set LOCAL_IMAGE_NAME when using from_docker_image().")
 
