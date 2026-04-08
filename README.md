@@ -33,7 +33,7 @@ docker build -t rl_env-env:local -f server/Dockerfile .
 ```bash
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o-mini
-export HF_TOKEN=<your-token>
+export API_KEY=<your-proxy-api-key>
 export LOCAL_IMAGE_NAME=rl_env-env:local
 ```
 
@@ -42,7 +42,7 @@ PowerShell:
 ```powershell
 $env:API_BASE_URL = "https://api.openai.com/v1"
 $env:MODEL_NAME = "gpt-4o-mini"
-$env:HF_TOKEN = "<your-token>"
+$env:API_KEY = "<your-proxy-api-key>"
 $env:LOCAL_IMAGE_NAME = "rl_env-env:local"
 ```
 
